@@ -539,6 +539,19 @@
       padding: 22px;
     }
 
+    .settings-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .settings-modal-title {
+      margin: 0;
+      line-height: 1.1;
+    }
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -560,6 +573,11 @@
 
       .section-title {
         font-size: 1.5rem;
+      }
+
+      .settings-modal-header {
+        gap: 14px;
+        margin-bottom: 14px;
       }
     }
 
@@ -589,6 +607,11 @@
       #sidebar .nav-item {
         width: calc(100% - var(--side-padding) * 2);
       }
+
+      .settings-modal-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -610,7 +633,7 @@
       <div class="mobile-topbar">
         <button id="mobileMenuButton" type="button" class="mobile-menu-btn">
           <i data-lucide="menu" class="w-4 h-4"></i>
-          Menue
+          Menü
         </button>
       </div>
 
@@ -641,10 +664,10 @@
             <div class="stat-label">Status</div>
             <div id="heroStatus" class="stat-value">Wird geladen...</div>
           </div>
-        <div class="stat-card">
-          <div class="stat-label">Spieler</div>
-          <div id="heroPlayers" class="stat-value">-</div>
-        </div>
+          <div class="stat-card">
+            <div class="stat-label">Spieler</div>
+            <div id="heroPlayers" class="stat-value">-</div>
+          </div>
         </div>
 
         <div class="panel">
@@ -653,7 +676,7 @@
               <img id="serverIcon" alt="Server Icon" class="h-16 w-16 rounded-2xl border border-[color:var(--card-border)] bg-black/20 object-cover p-1" src="assets/pack.png">
               <div>
                 <div id="homeStatus" class="text-xl font-extrabold text-[var(--text-main)]">Verbinde...</div>
-                <div id="homeLatency" class="mt-1 text-sm text-[var(--text-soft)]">Latenz wird geprueft</div>
+                <div id="homeLatency" class="mt-1 text-sm text-[var(--text-soft)]">Latenz wird geprüft</div>
               </div>
             </div>
             <div class="chip" id="motdBadge">Minecraft</div>
@@ -686,7 +709,7 @@
           </article>
           <article class="rule-card">
             <div class="rule-title"><i data-lucide="pickaxe" class="w-5 h-5 text-emerald-400"></i>Kein Griefing</div>
-            <div class="rule-text">Basen, Kisten und Farmen anderer bleiben unberuehrt.</div>
+            <div class="rule-text">Basen, Kisten und Farmen anderer bleiben unberührt.</div>
           </article>
           <article class="rule-card">
             <div class="rule-title"><i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i>Lag vermeiden</div>
@@ -698,7 +721,7 @@
           </article>
           <article class="rule-card">
             <div class="rule-title"><i data-lucide="map-pinned" class="w-5 h-5 text-fuchsia-400"></i>Gebiete markieren</div>
-            <div class="rule-text">Groessere Bauprojekte bitte sichtbar markieren.</div>
+            <div class="rule-text">Größere Bauprojekte bitte sichtbar markieren.</div>
           </article>
           <article class="rule-card">
             <div class="rule-title"><i data-lucide="heart-handshake" class="w-5 h-5 text-rose-400"></i>Admins</div>
@@ -727,13 +750,13 @@
 
   <div id="settingsModal" class="modal-overlay">
     <div class="settings-modal-card" onclick="event.stopPropagation()">
-      <div class="section-header">
+      <div class="settings-modal-header">
         <div>
-          <h2 class="section-title">Einstellungen</h2>
+          <h2 class="section-title settings-modal-title">Einstellungen</h2>
         </div>
         <button id="closeSettingsButton" type="button" class="btn">
           <i data-lucide="x" class="w-4 h-4"></i>
-          Schliessen
+          Schließen
         </button>
       </div>
 
@@ -992,7 +1015,7 @@
 
       heroStatus.textContent = "Wird geladen...";
       heroPlayers.textContent = "-";
-      homeLatency.textContent = "Latenz wird geprueft";
+      homeLatency.textContent = "Latenz wird geprüft";
       refreshStatusButton.disabled = true;
       refreshStatusButton.style.opacity = "0.7";
       serverIcon.src = PACK_ICON;
@@ -1007,7 +1030,7 @@
         const playersMax = data.players?.max ?? "?";
         const latencyValue = Number.isFinite(data.latency) ? Math.round(data.latency) : null;
         const ping = latencyValue !== null ? `${latencyValue} ms` : "-";
-        const motd = data.motd?.clean || data.motd?.html?.replace(/<[^>]*>/g, " ") || "Keine MOTD verfuegbar";
+        const motd = data.motd?.clean || data.motd?.html?.replace(/<[^>]*>/g, " ") || "Keine MOTD verfügbar";
 
         heroStatus.textContent = online ? "Online" : "Offline";
         heroPlayers.textContent = online ? `${playersOnline} / ${playersMax}` : "0 / 0";
@@ -1027,7 +1050,7 @@
         heroStatus.textContent = "Nicht erreichbar";
         heroPlayers.textContent = "-";
         homeStatus.textContent = "Verbindung fehlgeschlagen";
-        homeLatency.textContent = "Bitte spaeter erneut versuchen";
+        homeLatency.textContent = "Bitte später erneut versuchen";
         serverMotd.textContent = "Status konnte nicht geladen werden.";
         motdBadge.textContent = "Fehler";
         serverIcon.src = PACK_ICON;
@@ -1053,7 +1076,7 @@
         const indexRaw = await indexFile.async("string");
         const manifest = JSON.parse(indexRaw);
         const files = Array.isArray(manifest.files) ? manifest.files : [];
-        if (!files.length) throw new Error("Keine Mod-Eintraege gefunden");
+        if (!files.length) throw new Error("Keine Mod-Einträge gefunden");
 
         const projectIds = [...new Set(files.map((file) => extractProjectId(file)).filter(Boolean))];
         const projectMap = await loadModrinthProjects(projectIds);
@@ -1188,7 +1211,7 @@
           copyIpButtonLabel.textContent = "IP kopieren";
         }, 1800);
       } catch {
-        copyIpButtonLabel.textContent = "Nicht moeglich";
+        copyIpButtonLabel.textContent = "Nicht möglich";
         setTimeout(() => {
           copyIpButtonLabel.textContent = "IP kopieren";
         }, 1800);
