@@ -1,27 +1,27 @@
 # MCServer1523 Homepage
 
-Statische Homepage fuer einen Minecraft-Server, optimiert fuer GitHub Pages.
+Statische Homepage für einen Minecraft-Server, optimiert für GitHub Pages.
 
 Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen Datei und nutzt:
 
 - `Tailwind CSS` per CDN
 - `Lucide Icons` per CDN
-- lokale Speicherung fuer Theme, aktive Seite und Sidebar-Reihenfolge
-- Live-Status ueber die `mcstatus.io` API
+- lokale Speicherung für Theme, aktive Seite und Sidebar-Reihenfolge
+- Live-Status über die `mcstatus.io` API
 
 ## Funktionen
 
 - Sidebar im ChessHub-Stil
-- Seiten fuer `Home`, `Map`, `Regeln` und `Modpack`
+- Seiten für `Home`, `Map`, `Regeln` und `Modpack`
 - Einstellungen als Popup
 - Mobile Navigation
-- Live-Anzeige fuer:
+- Live-Anzeige für:
   - Serverstatus
   - Online-Spieler
   - MOTD
   - Server-Icon
 - Fallback auf `assets/pack.png`, wenn der Server offline ist
-- Modpack-Download ueber `assets/modpack.mrpack`
+- Modpack-Download über `assets/modpack.mrpack`
 - Mod-Liste aus einem Modrinth-`.mrpack`, falls vorhanden
 
 ## Projektstruktur
@@ -37,17 +37,17 @@ Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen 
 
 ## Deployment mit GitHub Pages
 
-Da die Seite rein statisch ist, reicht es aus, das Repository auf GitHub hochzuladen und GitHub Pages fuer den Branch mit `index.html` zu aktivieren.
+Da die Seite rein statisch ist, reicht es aus, das Repository auf GitHub hochzuladen und GitHub Pages für den Branch mit `index.html` zu aktivieren.
 
 Typischer Ablauf:
 
 1. Repository auf GitHub pushen
-2. In GitHub unter `Settings -> Pages` den Branch auswaehlen
+2. In GitHub unter `Settings -> Pages` den Branch auswählen
 3. Root-Verzeichnis deployen
 
 ## Lokal testen
 
-Die Seite kann direkt im Browser geoeffnet werden. Fuer realistischeres Verhalten mit Fetch/Assets ist ein lokaler Webserver besser, zum Beispiel:
+Die Seite kann direkt im Browser geöffnet werden. Für realistischeres Verhalten mit Fetch/Assets ist ein lokaler Webserver besser, zum Beispiel:
 
 ```bash
 python3 -m http.server 8000
@@ -75,6 +75,6 @@ Aktuell verwendet die Seite:
 
 ## Hinweise
 
-- Ein echter roher TCP-Portscan ist in einer normalen GitHub-Pages-Seite im Browser nicht moeglich.
-- Der Serverstatus wird deshalb ueber `https://api.mcstatus.io/v2/status/java/...` geladen.
+- Ein echter roher TCP-Portscan ist in einer normalen GitHub-Pages-Seite im Browser nicht möglich.
+- Der Serverstatus wird deshalb über `https://api.mcstatus.io/v2/status/java/...` geladen.
 - Wenn `assets/modpack.mrpack` kein echtes Modrinth-Pack ist, zeigt die Modpack-Seite einen Fallback-Hinweis.
