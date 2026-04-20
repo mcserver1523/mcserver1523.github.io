@@ -502,6 +502,56 @@
       background: rgba(79, 70, 229, 0.08);
     }
 
+    .sort-item-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .sort-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sort-mobile-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sort-move-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.2s var(--fluid-ease), border-color 0.2s var(--fluid-ease), color 0.2s var(--fluid-ease);
+    }
+
+    .sort-move-btn:disabled {
+      opacity: 0.45;
+    }
+
+    .sort-move-btn:not(:disabled):hover {
+      background: rgba(79, 70, 229, 0.12);
+      border-color: rgba(79, 70, 229, 0.25);
+      color: var(--text-main);
+    }
+
+    .sort-item.touch-dragging {
+      opacity: 0.7;
+      transform: scale(0.985);
+    }
+
     .notice {
       padding: 16px 18px;
       border-radius: 18px;
@@ -615,6 +665,10 @@
     }
 
     @media (max-width: 820px) {
+      .sort-item {
+        cursor: default;
+      }
+
       .mobile-topbar {
         display: block;
       }
@@ -961,17 +1015,35 @@
       sortList.innerHTML = "";
       appState.sidebarOrder.forEach((tabKey) => {
         const def = TAB_DEFINITIONS[tabKey];
+        const index = appState.sidebarOrder.indexOf(tabKey);
         const item = document.createElement("div");
         item.className = "sort-item";
         item.draggable = true;
         item.dataset.tab = tabKey;
         item.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="sort-item-main">
             <i data-lucide="${def.icon}" class="w-4 h-4 ${def.color}"></i>
             <div class="font-semibold text-[var(--text-main)]">${def.label}</div>
           </div>
-          <i data-lucide="grip-vertical" class="w-4 h-4 text-[var(--text-muted)]"></i>
+          <div class="sort-item-actions">
+            <div class="sort-mobile-actions">
+              <button type="button" class="sort-move-btn" data-direction="up" aria-label="${def.label} nach oben" ${index === 0 ? "disabled" : ""}>
+                <i data-lucide="chevron-up" class="w-4 h-4"></i>
+              </button>
+              <button type="button" class="sort-move-btn" data-direction="down" aria-label="${def.label} nach unten" ${index === appState.sidebarOrder.length - 1 ? "disabled" : ""}>
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <i data-lucide="grip-vertical" class="sort-drag-handle w-4 h-4 text-[var(--text-muted)]"></i>
+          </div>
         `;
+        item.querySelectorAll(".sort-move-btn").forEach((button) => {
+          button.addEventListener("click", () => moveTab(tabKey, button.dataset.direction));
+        });
+        item.addEventListener("pointerdown", onSortPointerDown);
+        item.addEventListener("pointermove", onSortPointerMove);
+        item.addEventListener("pointerup", onSortPointerUp);
+        item.addEventListener("pointercancel", onSortPointerCancel);
         item.addEventListener("dragstart", onDragStart);
         item.addEventListener("dragend", onDragEnd);
         item.addEventListener("dragover", onDragOver);
@@ -983,6 +1055,34 @@
     }
 
     let draggedTab = null;
+    let touchDragState = null;
+
+    function reorderSidebarTabs(movedTab, targetTab) {
+      if (!movedTab || !targetTab || movedTab === targetTab) return;
+      const nextOrder = [...appState.sidebarOrder];
+      const from = nextOrder.indexOf(movedTab);
+      const to = nextOrder.indexOf(targetTab);
+      if (from < 0 || to < 0) return;
+      nextOrder.splice(from, 1);
+      nextOrder.splice(to, 0, movedTab);
+      appState.sidebarOrder = nextOrder;
+      saveState();
+      renderNavigation();
+      renderSortList();
+    }
+
+    function moveTab(tabKey, direction) {
+      const currentIndex = appState.sidebarOrder.indexOf(tabKey);
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= appState.sidebarOrder.length) return;
+      const nextOrder = [...appState.sidebarOrder];
+      const [movedTab] = nextOrder.splice(currentIndex, 1);
+      nextOrder.splice(targetIndex, 0, movedTab);
+      appState.sidebarOrder = nextOrder;
+      saveState();
+      renderNavigation();
+      renderSortList();
+    }
 
     function onDragStart(event) {
       draggedTab = event.currentTarget.dataset.tab;
@@ -991,8 +1091,9 @@
     }
 
     function onDragEnd(event) {
+      draggedTab = null;
       event.currentTarget.classList.remove("dragging");
-      document.querySelectorAll(".sort-item").forEach((item) => item.classList.remove("drag-over"));
+      clearSortDragState();
     }
 
     function onDragOver(event) {
@@ -1008,16 +1109,61 @@
       event.preventDefault();
       const targetTab = event.currentTarget.dataset.tab;
       event.currentTarget.classList.remove("drag-over");
-      if (!draggedTab || draggedTab === targetTab) return;
-      const nextOrder = [...appState.sidebarOrder];
-      const from = nextOrder.indexOf(draggedTab);
-      const to = nextOrder.indexOf(targetTab);
-      nextOrder.splice(from, 1);
-      nextOrder.splice(to, 0, draggedTab);
-      appState.sidebarOrder = nextOrder;
-      saveState();
-      renderNavigation();
-      renderSortList();
+      reorderSidebarTabs(draggedTab, targetTab);
+      draggedTab = null;
+    }
+
+    function clearSortDragState() {
+      document.querySelectorAll(".sort-item").forEach((item) => {
+        item.classList.remove("drag-over", "touch-dragging");
+      });
+    }
+
+    function onSortPointerDown(event) {
+      if (!["touch", "pen"].includes(event.pointerType)) return;
+      if (event.target.closest(".sort-move-btn")) return;
+      touchDragState = {
+        pointerId: event.pointerId,
+        draggedTab: event.currentTarget.dataset.tab,
+        sourceItem: event.currentTarget,
+        activeTargetTab: event.currentTarget.dataset.tab,
+        moved: false,
+        startX: event.clientX,
+        startY: event.clientY
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    function onSortPointerMove(event) {
+      if (!touchDragState || touchDragState.pointerId !== event.pointerId) return;
+      const moveDistance = Math.hypot(event.clientX - touchDragState.startX, event.clientY - touchDragState.startY);
+      if (!touchDragState.moved && moveDistance < 8) return;
+      touchDragState.moved = true;
+      clearSortDragState();
+      touchDragState.sourceItem.classList.add("touch-dragging");
+
+      const hoveredElement = document.elementFromPoint(event.clientX, event.clientY);
+      const hoveredItem = hoveredElement ? hoveredElement.closest(".sort-item") : null;
+      if (!hoveredItem) return;
+      hoveredItem.classList.add("drag-over");
+      touchDragState.activeTargetTab = hoveredItem.dataset.tab;
+      event.preventDefault();
+    }
+
+    function onSortPointerUp(event) {
+      if (!touchDragState || touchDragState.pointerId !== event.pointerId) return;
+      const { draggedTab: touchDraggedTab, activeTargetTab, moved } = touchDragState;
+      touchDragState = null;
+      clearSortDragState();
+      if (moved) {
+        reorderSidebarTabs(touchDraggedTab, activeTargetTab);
+      }
+    }
+
+    function onSortPointerCancel(event) {
+      if (!touchDragState || touchDragState.pointerId !== event.pointerId) return;
+      touchDragState = null;
+      clearSortDragState();
     }
 
     function closeMobileSidebar() {
