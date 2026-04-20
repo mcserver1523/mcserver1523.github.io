@@ -11,7 +11,6 @@ Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen 
 
 ## Funktionen
 
-- Sidebar im ChessHub-Stil
 - Seiten für `Home`, `Map`, `Regeln` und `Modpack`
 - Einstellungen als Popup
 - Mobile Navigation
