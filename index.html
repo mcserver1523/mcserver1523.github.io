@@ -405,6 +405,26 @@
       transform: translateY(-2px);
     }
 
+    .mod-link-icon {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+
+    .mod-link-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      stroke-width: 2;
+    }
+
     .chip {
       display: inline-flex;
       align-items: center;
@@ -1328,7 +1348,9 @@
                   <div class="font-extrabold text-[var(--text-main)]">${escapeHtml(card.name)}</div>
                   <div class="mt-2 text-sm leading-6 text-[var(--text-soft)]">${escapeHtml(card.description)}</div>
                 </div>
-                <i data-lucide="external-link" class="w-4 h-4 text-[var(--text-muted)]"></i>
+                <span class="mod-link-icon" aria-hidden="true">
+                  <i data-lucide="external-link"></i>
+                </span>
               </div>
               <div class="mt-4 flex flex-wrap gap-2">
                 ${card.categories.map((category) => `<span class="chip">${escapeHtml(category)}</span>`).join("")}
