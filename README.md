@@ -1,18 +1,22 @@
 # MCServer1523 Homepage
 
-Statische Homepage für einen Minecraft-Server, optimiert für GitHub Pages.
+Homepage für einen Minecraft-Server mit statischem Frontend.
 
-Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen Datei und nutzt:
+Das Frontend nutzt:
 
 - `Tailwind CSS` per CDN
 - `Lucide Icons` per CDN
 - lokale Speicherung für Theme, aktive Seite und Sidebar-Reihenfolge
 - Live-Status über die `mcstatus.io` API
+- News-Feed mit Markdown-Unterstützung über einen separaten JSON-/Medien-Server auf Port `9339`
 
 ## Funktionen
 
-- Seiten für `Home`, `Map`, `Regeln` und `Modpack`
+- Sidebar im ChessHub-Stil
+- Seiten für `Home`, `News`, `Map`, `Regeln` und `Modpack`
 - Einstellungen als Popup
+- Admin-Login im Einstellungsfenster
+- Admin-Panel zum Erstellen, Bearbeiten und Löschen von News-Posts
 - Mobile Navigation
 - Live-Anzeige für:
   - Serverstatus
@@ -22,6 +26,7 @@ Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen 
 - Fallback auf `assets/pack.png`, wenn der Server offline ist
 - Modpack-Download über `assets/modpack.mrpack`
 - Mod-Liste aus einem Modrinth-`.mrpack`, falls vorhanden
+- Upload von Bildern und Videos für News-Posts
 
 ## Projektstruktur
 
@@ -29,9 +34,7 @@ Die Seite besteht komplett aus `HTML`, `CSS` und `JavaScript` in einer einzigen 
 .
 ├── index.html
 ├── README.md
-└── assets
-    ├── modpack.mrpack
-    └── pack.png
+└── assets/
 ```
 
 ## Deployment mit GitHub Pages
@@ -46,7 +49,7 @@ Typischer Ablauf:
 
 ## Lokal testen
 
-Die Seite kann direkt im Browser geöffnet werden. Für realistischeres Verhalten mit Fetch/Assets ist ein lokaler Webserver besser, zum Beispiel:
+Das Frontend kann direkt im Browser geöffnet werden. Für realistischeres Verhalten mit Fetch/Assets ist ein lokaler Webserver besser, zum Beispiel:
 
 ```bash
 python3 -m http.server 8000
@@ -60,12 +63,13 @@ http://localhost:8000
 
 ## Wichtige Anpassungen
 
-Die wichtigsten Konstanten stehen in `index.html`:
+Die wichtigsten Frontend-Konstanten stehen in `index.html`:
 
 - Server-IP: `SERVER_IP`
 - Server-Port: `SERVER_PORT`
 - Pack-Icon: `PACK_ICON`
 - Modpack-Datei: `MODPACK_URL`
+- News-API: `NEWS_API_ORIGIN`
 
 Aktuell verwendet die Seite:
 
@@ -76,4 +80,6 @@ Aktuell verwendet die Seite:
 
 - Ein echter roher TCP-Portscan ist in einer normalen GitHub-Pages-Seite im Browser nicht möglich.
 - Der Serverstatus wird deshalb über `https://api.mcstatus.io/v2/status/java/...` geladen.
-- Wenn `assets/modpack.mrpack` kein echtes Modrinth-Pack ist, zeigt die Modpack-Seite einen Fallback-Hinweis.
+- Die aktuelle Modpack-Datei `assets/modpack.mrpack` bildet den Stand `v1.4.0` ab.
+- Wenn `assets/modpack.mrpack` kein lesbares Modrinth-Pack ist, zeigt die Modpack-Seite einen Fallback-Hinweis.
+- Der News-Feed erwartet eine API auf Port `9339`.
