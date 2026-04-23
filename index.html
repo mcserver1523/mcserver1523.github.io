@@ -1082,7 +1082,7 @@
         </div>
 
         <div class="map-shell">
-          <iframe title="Serverkarte" src="https://mcserver1523.duckdns.org:8080/map.html" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <iframe id="homeMapFrame" data-map-frame title="Serverkarte" src="https://mcserver1523.duckdns.org:8080/map.html" loading="lazy" referrerpolicy="no-referrer"></iframe>
         </div>
       </section>
 
@@ -1104,7 +1104,7 @@
 
       <section id="view-map" class="page-view">
         <div class="map-shell fullscreen">
-          <iframe title="Minecraft Karte" src="https://mcserver1523.duckdns.org:8080/map.html" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <iframe id="mapPageFrame" data-map-frame title="Minecraft Karte" src="https://mcserver1523.duckdns.org:8080/map.html" loading="lazy" referrerpolicy="no-referrer"></iframe>
         </div>
       </section>
 
@@ -1265,6 +1265,17 @@
               </button>
             </div>
           </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="font-extrabold text-[var(--text-main)]">Browser-Cache</div>
+              <div id="cacheStatusText" class="section-subtitle">Map-Daten werden automatisch frisch geladen.</div>
+            </div>
+            <button id="clearCacheButton" type="button" class="btn">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              Cache leeren
+            </button>
+          </div>
         </div>
 
         <div class="setting-card">
@@ -1318,8 +1329,11 @@ const SERVER_IP = "mcserver1523.duckdns.org";
 const SERVER_PORT = 25565;
 const PACK_ICON = "assets/pack.png";
 const MODPACK_URL = "assets/modpack.mrpack";
+const MAP_URL = "https://mcserver1523.duckdns.org:8080/map.html";
 const STORAGE_KEY = "mcserver1523.homepage.v4";
 const ADMIN_SESSION_KEY = "mcserver1523.news.admin.v1";
+const CACHE_META_KEY = "mcserver1523.homepage.cache.v1";
+const CACHE_MAX_AGE_MS = 20 * 60 * 1000;
 const NEWS_API_ORIGIN = "https://mcserver1523.duckdns.org:8080";
 const NEWS_API_BASE = `${NEWS_API_ORIGIN}/news-api`;
 const DEFAULT_TAB_ORDER = ["home", "news", "map", "regeln", "modpack"];
@@ -1386,7 +1400,12 @@ const existingMediaGrid = document.getElementById("existingMediaGrid");
 const adminPostsList = document.getElementById("adminPostsList");
 const adminLockedLoginButton = document.getElementById("adminLockedLoginButton");
 const pendingMediaList = document.getElementById("pendingMediaList");
+const clearCacheButton = document.getElementById("clearCacheButton");
+const cacheStatusText = document.getElementById("cacheStatusText");
+const mapFrames = [...document.querySelectorAll("[data-map-frame]")];
 let pendingUploadFiles = [];
+const cacheState = loadCacheState();
+let cacheCleanupTimer = 0;
 
 function loadState() {
   try {
@@ -1423,6 +1442,23 @@ function loadAdminSession() {
   }
 }
 
+function loadCacheState() {
+  try {
+    const raw = localStorage.getItem(CACHE_META_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const lastClearedAt = Number(parsed.lastClearedAt || 0);
+    return {
+      lastClearedAt: Number.isFinite(lastClearedAt) ? lastClearedAt : 0,
+      mapBust: String(parsed.mapBust || (lastClearedAt > 0 ? lastClearedAt : Date.now()))
+    };
+  } catch {
+    return {
+      lastClearedAt: 0,
+      mapBust: String(Date.now())
+    };
+  }
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
 }
@@ -1431,11 +1467,120 @@ function saveAdminSession() {
   sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(adminState));
 }
 
+function saveCacheState() {
+  localStorage.setItem(CACHE_META_KEY, JSON.stringify(cacheState));
+}
+
 function clearAdminSession() {
   adminState.token = "";
   adminState.username = "";
   adminState.expiresAt = "";
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
+}
+
+function buildMapUrl() {
+  const url = new URL(MAP_URL);
+  if (cacheState.mapBust) {
+    url.searchParams.set("cache", cacheState.mapBust);
+  }
+  return url.toString();
+}
+
+function applyMapFrameSources() {
+  const nextSrc = buildMapUrl();
+  mapFrames.forEach((frame) => {
+    if (frame.src !== nextSrc) {
+      frame.src = nextSrc;
+    }
+  });
+}
+
+function renderCacheStatus(message = "") {
+  if (!cacheStatusText) return;
+  const timestamp = cacheState.lastClearedAt
+    ? `Zuletzt bereinigt: ${formatDate(cacheState.lastClearedAt)}.`
+    : "Noch nicht manuell bereinigt.";
+  cacheStatusText.textContent = [message, timestamp, "Automatisch nach 20 Minuten."]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function isProjectDataName(value) {
+  return /mcserver1523|news-server|map/i.test(String(value || ""));
+}
+
+function scheduleCacheCleanup() {
+  window.clearTimeout(cacheCleanupTimer);
+  const age = Date.now() - cacheState.lastClearedAt;
+  const delay = cacheState.lastClearedAt > 0
+    ? Math.max(0, CACHE_MAX_AGE_MS - age)
+    : 0;
+  cacheCleanupTimer = window.setTimeout(() => {
+    clearBrowserCache({ automatic: true }).catch(() => {
+      renderCacheStatus("Automatische Bereinigung fehlgeschlagen.");
+      scheduleCacheCleanup();
+    });
+  }, delay);
+}
+
+async function clearCacheStorageEntries() {
+  if (!("caches" in window)) return;
+  const keys = await caches.keys();
+  const matchingKeys = keys.filter((key) => isProjectDataName(key));
+  await Promise.allSettled(matchingKeys.map((key) => caches.delete(key)));
+}
+
+async function clearIndexedDbEntries() {
+  if (!("indexedDB" in window) || typeof indexedDB.databases !== "function") return;
+  const databases = await indexedDB.databases();
+  const matchingNames = databases
+    .map((database) => database?.name)
+    .filter((name) => name && isProjectDataName(name));
+
+  await Promise.allSettled(matchingNames.map((name) => new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  })));
+}
+
+async function clearBrowserCache(options = {}) {
+  const automatic = Boolean(options.automatic);
+  if (clearCacheButton) {
+    clearCacheButton.disabled = true;
+    clearCacheButton.style.opacity = "0.7";
+  }
+  renderCacheStatus(automatic ? "Cache wird automatisch bereinigt." : "Cache wird bereinigt.");
+
+  try {
+    await Promise.allSettled([
+      clearCacheStorageEntries(),
+      clearIndexedDbEntries()
+    ]);
+    cacheState.lastClearedAt = Date.now();
+    cacheState.mapBust = String(cacheState.lastClearedAt);
+    saveCacheState();
+    applyMapFrameSources();
+    renderCacheStatus(automatic ? "Cache automatisch bereinigt." : "Cache geleert.");
+  } finally {
+    if (clearCacheButton) {
+      clearCacheButton.disabled = false;
+      clearCacheButton.style.opacity = "1";
+    }
+    scheduleCacheCleanup();
+  }
+}
+
+async function ensureFreshBrowserCache() {
+  const age = Date.now() - cacheState.lastClearedAt;
+  if (!cacheState.lastClearedAt || age >= CACHE_MAX_AGE_MS) {
+    await clearBrowserCache({ automatic: true });
+    return;
+  }
+  applyMapFrameSources();
+  renderCacheStatus();
+  scheduleCacheCleanup();
 }
 
 function sanitizeOrder(input) {
@@ -2440,6 +2585,11 @@ adminLockedLoginButton.addEventListener("click", openAdminLoginModal);
 refreshStatusButton.addEventListener("click", fetchServerStatus);
 copyIpButton.addEventListener("click", copyServerIp);
 refreshNewsButton.addEventListener("click", fetchNewsFeed);
+clearCacheButton.addEventListener("click", () => {
+  clearBrowserCache().catch(() => {
+    renderCacheStatus("Cache konnte nicht vollständig bereinigt werden.");
+  });
+});
 adminMediaInput.addEventListener("change", () => {
   const seen = new Set(pendingUploadFiles.map(fileFingerprint));
   [...adminMediaInput.files].forEach((file) => {
@@ -2467,6 +2617,7 @@ renderNavigation();
 renderSortList();
 updateActiveStates();
 updateAdminUi();
+ensureFreshBrowserCache();
 parseModpack();
 fetchServerStatus();
 fetchNewsFeed();
